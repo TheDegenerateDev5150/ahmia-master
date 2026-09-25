@@ -16,10 +16,58 @@ from decouple import config
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # You can filter terms and/or show some helpful content to the user
+#
+# Keep this False until the category-tailored intervention study is ready to launch.
+# Filtering still remains active while this is False; only category-specific
+# messaging and category propagation to intervention links are disabled.
+CATEGORY_INTERVENTION_TEST_ENABLED = config(
+    'CATEGORY_INTERVENTION_TEST_ENABLED', cast=bool, default=False
+)
+
+# A query may match several categories. The first matching category in this
+# tuple becomes the primary intervention stratum.
+CATEGORY_PRIORITY = (
+    "AI_CSAM",
+    "COM_groups",
+    "contact_offending_related",
+    "CSAM_known_content",
+    "CSAM_site_navigation",
+    "CSAM_harm_framing",
+    "CSAM_affiliative_framing",
+    "CSAM_general",
+)
+
+FILTER_TERM_FILES = {
+    "AI_CSAM": "/etc/nginx/banned_terms_AI_CSAM.map",
+    "COM_groups": "/etc/nginx/banned_terms_COM_groups.map",
+    "contact_offending_related": "/etc/nginx/banned_terms_contact_offending_related.map",
+    "CSAM_known_content": "/etc/nginx/banned_terms_CSAM_known_content.map",
+    "CSAM_site_navigation": "/etc/nginx/banned_terms_CSAM_site_navigation.map",
+    "CSAM_harm_framing": "/etc/nginx/banned_terms_CSAM_harm_framing.map",
+    "CSAM_affiliative_framing": "/etc/nginx/banned_terms_CSAM_affiliative_framing.map",
+    "CSAM_general": "/etc/nginx/banned_terms_CSAM_general.map",
+}
+
+
+def read_filter_terms(filename):
+    """Read Ahmia filter terms from an nginx map include."""
+    return [
+        line[3:-5].strip()
+        for line in open(filename)
+        if line.startswith('"~*') and line.strip().endswith('" 1;')
+    ]
+
+
+FILTER_TERMS_BY_CATEGORY = {
+    category: read_filter_terms(FILTER_TERM_FILES[category])
+    for category in CATEGORY_PRIORITY
+}
+
+# Flat compatibility list used by result filtering.
 FILTER_TERMS_AND_SHOW_HELP = [
-    line[3:-5].strip()
-    for line in open("/etc/nginx/banned_terms.map")
-    if line.startswith('"~*') and line.strip().endswith('" 1;')
+    term
+    for category in CATEGORY_PRIORITY
+    for term in FILTER_TERMS_BY_CATEGORY[category]
 ]
 
 # Elasticsearch settings using environment variables for sensitive information

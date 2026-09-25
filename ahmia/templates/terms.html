@@ -7,10 +7,9 @@
     <h3>{% trans "Terms of Service" %}</h3>
     <p>
       {% blocktrans %}
-      Last updated: 22 August 2025
+      Last updated: 25 September 2026
       {% endblocktrans %}
     </p>
-
     <p>
       {% blocktrans %}
       These Terms of Service govern your use of the Ahmia search engine and apply to all users, including those accessing the Tor (.onion) and clearnet versions.
@@ -18,7 +17,6 @@
       Continued use of the service after updates constitutes acceptance of the revised terms.
       {% endblocktrans %}
     </p>
-
     <h4>{% trans "1. What Does Ahmia Do?" %}</h4>
     <p>
       {% blocktrans %}
@@ -31,18 +29,20 @@
       {% blocktrans %}
       Ahmia complies with online safety regulations and laws, including the UK Online Safety Act and the Australian Online Safety Act.
       Users can report harmful or illegal content.
-      Ahmia actively filters search results and prevents search terms.
-      In cases where users search for CSAM or any sexual content, Ahmia provides links to self-help programs or research surveys instead of showing results.
+      Ahmia actively filters search results and may reject or intercept search terms that match its safety filters.
+      When a search matches a CSAM-related or other safety filter, Ahmia may show self-help resources, research surveys, or an alternative result view instead of ordinary search results.
+      Matched search terms may be assigned to an intervention category so that a category-specific message or resource can be shown.
+      The category describes the matched query and is not used to create a persistent user profile.
       The types of content that Ahmia filters may grow in the future as safety rules change and technology for finding harmful content gets better,
       all while keeping Ahmia's promise to protect user privacy and anonymity.
       {% endblocktrans %}
     </p>
     <p>
       {% blocktrans %}
-      Ahmia may conduct user interface experiments, such as A/B tests, to evaluate how effectively help links or alternative search result views reach users, i.e., those seeking harmful content or high-risk terms.
-      These tests may involve offering different layouts, messages, or redirect options on a randomized basis.
-      The goal is to improve user engagement with educational or self-help resources while respecting user privacy.
-      No identification of users is performed during these experiments.
+      Ahmia may conduct user interface experiments, such as A/B tests, to evaluate how effectively help links, messages, or alternative search result views reach users who submit filtered or high-risk search terms.
+      These tests may involve different layouts, category-specific messages, help resources, or redirect options, and may use randomized experiment labels.
+      Ahmia may measure aggregate interactions such as help-link clicks to evaluate these interventions.
+      No accounts, persistent user identifiers, or user profiles are created for these experiments.
       {% endblocktrans %}
     </p>
     <p>
@@ -50,13 +50,12 @@
       <strong>Digital Services Act (DSA) Statement:</strong>
       Ahmia is a small-scale, non-commercial academic project that processes approximately 1,715,358 searches per month,
       with the total number of unique users being significantly lower.
-      It is designed with privacy-by-design principles and does not collect personal data, use cookies, or store IP addresses;
+      It is designed with privacy-by-design principles and does not use cookies, store IP addresses, or create user accounts or persistent user identifiers;
       thus, Ahmia cannot estimate the number of users beyond the search count.
       Most users access the service via the Tor Browser, making it technically impossible to determine their geographic origin or the number of EU-based users.
       No IP address data is available for the `.onion` version of Ahmia.
       {% endblocktrans %}
     </p>
-
     <h4>{% trans "2. What You Agree Not To Do" %}</h4>
     <ul>
       <li>{% trans "Use Ahmia to search for, promote, or access illegal content, especially child sexual abuse material (CSAM) or sexually exploitative material." %}</li>
@@ -70,7 +69,6 @@
       Access may be limited or rate-restricted in cases of misuse.
       {% endblocktrans %}
     </p>
-
     <h4>{% trans "3. Reporting Abuse" %}</h4>
     <p>
       {% blocktrans %}
@@ -84,7 +82,6 @@
       Requests are evaluated case-by-case in accordance with Finnish and EU law.
       {% endblocktrans %}
     </p>
-
     <h4>{% trans "4. Intellectual Property" %}</h4>
     <p>
       {% blocktrans %}
@@ -98,7 +95,6 @@
       We will review the request and may delist offending links.
       {% endblocktrans %}
     </p>
-
     <h4>{% trans "5. No Warranty" %}</h4>
     <p>
       {% blocktrans %}
@@ -107,7 +103,6 @@
       Use of Ahmia is at your own risk.
       {% endblocktrans %}
     </p>
-
     <h4>{% trans "6. Governing Law and Jurisdiction" %}</h4>
     <p>
       {% blocktrans %}
@@ -115,18 +110,16 @@
       Any disputes shall fall under the exclusive jurisdiction of the courts in Finland.
       {% endblocktrans %}
     </p>
-
     <h4>{% trans "7. Privacy" %}</h4>
     <p>
       {% blocktrans %}
-      Ahmia does not store personally identifiable information.
+      Ahmia is designed not to store direct personal identifiers such as IP addresses or account identifiers.
       There is no registration or login functionality.
       Users are advised not to enter personally identifiable information in search terms.
       For more details, refer to our
       <a href="/privacy/">Privacy Policy</a>.
       {% endblocktrans %}
     </p>
-
     <h4>{% trans "8. Updates to These Terms" %}</h4>
     <p>
       {% blocktrans %}
@@ -136,7 +129,6 @@
       Continued use of the service after updates implies acceptance of the revised terms.
       {% endblocktrans %}
     </p>
-
     <h4>{% trans "Contact" %}</h4>
     <p>
       {% blocktrans %}

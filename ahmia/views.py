@@ -1,6 +1,7 @@
 """ Views """
 import time
 import hashlib
+import re
 from datetime import date, datetime, timedelta
 from types import SimpleNamespace
 from operator import itemgetter
@@ -290,6 +291,9 @@ def onion_redirect(request):
     redirect_url = request.GET.get('redirect_url', '').replace('%22', '')
     redirect_url = redirect_url.replace('%26', '&').replace('%3F', '?')
     search_term = request.GET.get('search_term', '')
+    category = request.GET.get('category', '')
+    if category and category not in settings.FILTER_TERMS_BY_CATEGORY:
+        return HttpResponseBadRequest("Bad request: invalid category.")
     if not redirect_url or not search_term:
         return HttpResponseBadRequest("Bad request: no GET parameter URL.")
     if not xss_safe(redirect_url):
@@ -303,8 +307,8 @@ def onion_redirect(request):
             return HttpResponseBadRequest("Bad request: banned.")
     return HttpResponseRedirect(redirect_url)
 
-def help_page(query):
-    """ Return Help page """
+def help_page(query, category):
+    """ Return Help page with category-specific messaging. """
     allowed = [45, 95] + list(range(48, 58)) + list(range(97, 123))
     query = ''.join([i if ord(i) in allowed else '_' for i in query.lower()])
     tests = [
@@ -369,17 +373,113 @@ def help_page(query):
         #}
         # DO NOT ADD ANYTHING AFTER THE RANDOM PLACEHOLDER ITEM
     ]
+    category_messages = {
+        "AI_CSAM": {
+            "category": "AI_CSAM",
+            "title_en": "ReDirection | AI-generated sexual content involving children is not a harmless alternative.",
+            "paragraph_en_1": "Searching for or creating sexualised AI-generated depictions of children can reinforce sexual interest in children and harmful patterns of behaviour. Choosing synthetic material does not remove the need to address those patterns.",
+            "paragraph_en_2": "You can take the first step toward stopping by accessing confidential support through the ReDirection program.",
+            "paragraph_en_3": "The ReDirection program is accessible in the Tor network:",
+            "title_es": "ReDirección | El contenido sexual generado por IA que representa a menores no es una alternativa inofensiva.",
+            "paragraph_es_1": "Buscar o crear representaciones sexuales de menores generadas por IA puede reforzar el interés sexual en niños y patrones de comportamiento perjudiciales. Elegir material sintético no elimina la necesidad de abordar esos patrones.",
+            "paragraph_es_2": "Puedes dar el primer paso para detener este comportamiento accediendo a apoyo confidencial a través del programa ReDirección.",
+            "paragraph_es_3": "El programa ReDirección es accesible a través del navegador Tor:",
+        },
+        "COM_groups": {
+            "category": "COM_groups",
+            "title_en": "ReDirection | Online groups can normalise and reinforce harmful behaviour.",
+            "paragraph_en_1": "Communities that share, encourage, or normalise sexual material involving children can make harmful behaviour feel acceptable and harder to stop. Leaving those groups can be an important step toward change.",
+            "paragraph_en_2": "Confidential professional support can help you step away from these communities and reduce harmful behaviour.",
+            "paragraph_en_3": "The ReDirection program is accessible in the Tor network:",
+            "title_es": "ReDirección | Los grupos en línea pueden normalizar y reforzar comportamientos perjudiciales.",
+            "paragraph_es_1": "Las comunidades que comparten, fomentan o normalizan material sexual relacionado con menores pueden hacer que un comportamiento perjudicial parezca aceptable y sea más difícil de detener. Alejarse de estos grupos puede ser un paso importante hacia el cambio.",
+            "paragraph_es_2": "El apoyo profesional confidencial puede ayudarte a alejarte de estas comunidades y reducir conductas perjudiciales.",
+            "paragraph_es_3": "El programa ReDirección es accesible a través del navegador Tor:",
+        },
+        "contact_offending_related": {
+            "category": "contact_offending_related",
+            "title_en": "ReDirection | If you are thinking about sexual contact with a child, seek help before anyone is harmed.",
+            "paragraph_en_1": "Do not approach, groom, arrange sexual contact with, or sexually involve a child. If your searches relate to acting on sexual thoughts involving children, this is a point where you can choose not to progress further.",
+            "paragraph_en_2": "Confidential professional support can help you manage these thoughts and prevent contact offending.",
+            "paragraph_en_3": "The ReDirection program is accessible in the Tor network:",
+            "title_es": "ReDirección | Si estás pensando en tener contacto sexual con un menor, busca ayuda antes de que alguien resulte dañado.",
+            "paragraph_es_1": "No te acerques, captes, organices contacto sexual ni involucres sexualmente a un menor. Si tus búsquedas están relacionadas con actuar sobre pensamientos sexuales que involucran a niños, este es un momento en el que puedes decidir no avanzar más.",
+            "paragraph_es_2": "El apoyo profesional confidencial puede ayudarte a manejar estos pensamientos y prevenir delitos sexuales de contacto.",
+            "paragraph_es_3": "El programa ReDirección es accesible a través del navegador Tor:",
+        },
+        "CSAM_known_content": {
+            "category": "CSAM_known_content",
+            "title_en": "ReDirection | Searching for specific child sexual abuse material can become an established pattern.",
+            "paragraph_en_1": "Looking for particular victims, series, or named material can indicate an established pattern of seeking child sexual abuse material. Repeated searching continues demand for material created through the abuse and exploitation of children.",
+            "paragraph_en_2": "You can interrupt this pattern. Confidential professional support can help you stop searching for and viewing this material.",
+            "paragraph_en_3": "The ReDirection program is accessible in the Tor network:",
+            "title_es": "ReDirección | Buscar material específico de abuso sexual infantil puede convertirse en un patrón establecido.",
+            "paragraph_es_1": "Buscar víctimas concretas, series o material conocido puede indicar un patrón establecido de búsqueda de material de abuso sexual infantil. La búsqueda repetida mantiene la demanda de material creado mediante el abuso y la explotación de menores.",
+            "paragraph_es_2": "Puedes interrumpir este patrón. El apoyo profesional confidencial puede ayudarte a dejar de buscar y ver este material.",
+            "paragraph_es_3": "El programa ReDirección es accesible a través del navegador Tor:",
+        },
+        "CSAM_site_navigation": {
+            "category": "CSAM_site_navigation",
+            "title_en": "ReDirection | Stop before entering a service that distributes child sexual abuse material.",
+            "paragraph_en_1": "Searching for a known service or site that distributes sexual material involving children is a point where you can interrupt the behaviour before continuing to that material.",
+            "paragraph_en_2": "Instead of continuing, you can take the first step toward stopping and access confidential professional support.",
+            "paragraph_en_3": "The ReDirection program is accessible in the Tor network:",
+            "title_es": "ReDirección | Detente antes de entrar en un servicio que distribuye material de abuso sexual infantil.",
+            "paragraph_es_1": "Buscar un servicio o sitio conocido que distribuye material sexual relacionado con menores es un punto en el que puedes interrumpir el comportamiento antes de continuar hacia ese material.",
+            "paragraph_es_2": "En lugar de continuar, puedes dar el primer paso para detenerte y acceder a apoyo profesional confidencial.",
+            "paragraph_es_3": "El programa ReDirección es accesible a través del navegador Tor:",
+        },
+        "CSAM_harm_framing": {
+            "category": "CSAM_harm_framing",
+            "title_en": "ReDirection | Sexual violence against children causes severe and lasting harm.",
+            "paragraph_en_1": "Searching for sexual material that emphasises rape, pain, humiliation, coercion, or violence involves the sexualisation of serious harm to children. Do not allow these searches or fantasies to progress toward further harmful behaviour.",
+            "paragraph_en_2": "Confidential professional support can help you manage these interests and stop harmful patterns of behaviour.",
+            "paragraph_en_3": "The ReDirection program is accessible in the Tor network:",
+            "title_es": "ReDirección | La violencia sexual contra menores causa daños graves y duraderos.",
+            "paragraph_es_1": "Buscar material sexual que enfatiza violación, dolor, humillación, coacción o violencia implica sexualizar daños graves a menores. No permitas que estas búsquedas o fantasías avancen hacia comportamientos más perjudiciales.",
+            "paragraph_es_2": "El apoyo profesional confidencial puede ayudarte a manejar estos intereses y detener patrones de comportamiento perjudiciales.",
+            "paragraph_es_3": "El programa ReDirección es accesible a través del navegador Tor:",
+        },
+        "CSAM_affiliative_framing": {
+            "category": "CSAM_affiliative_framing",
+            "title_en": "ReDirection | Caring about a child means protecting their safety and boundaries.",
+            "paragraph_en_1": "Describing sexual interest in children as love does not make sexual behaviour or sexual material involving children safe or reciprocal. Children need adults to maintain protective sexual boundaries.",
+            "paragraph_en_2": "If you experience sexual thoughts about children, confidential professional support can help you manage them without harming a child.",
+            "paragraph_en_3": "The ReDirection program is accessible in the Tor network:",
+            "title_es": "ReDirección | Cuidar a un menor significa proteger su seguridad y sus límites.",
+            "paragraph_es_1": "Describir el interés sexual por menores como amor no hace que el comportamiento sexual o el material sexual relacionado con niños sea seguro ni recíproco. Los menores necesitan que los adultos mantengan límites sexuales protectores.",
+            "paragraph_es_2": "Si tienes pensamientos sexuales sobre menores, el apoyo profesional confidencial puede ayudarte a manejarlos sin causar daño a un niño.",
+            "paragraph_es_3": "El programa ReDirección es accesible a través del navegador Tor:",
+        },
+        "CSAM_general": {
+            "category": "CSAM_general",
+            "title_en": "ReDirection | You can stop searching for child sexual abuse material.",
+            "paragraph_en_1": "Searching for and viewing sexual material involving children contributes to a pattern connected to the abuse and exploitation of children. You can choose to interrupt that pattern now.",
+            "paragraph_en_2": "Confidential professional support can help you stop seeking this material and change your behaviour.",
+            "paragraph_en_3": "The ReDirection program is accessible in the Tor network:",
+            "title_es": "ReDirección | Puedes dejar de buscar material de abuso sexual infantil.",
+            "paragraph_es_1": "Buscar y ver material sexual relacionado con menores contribuye a un patrón conectado con el abuso y la explotación de niños. Puedes decidir interrumpir ese patrón ahora.",
+            "paragraph_es_2": "El apoyo profesional confidencial puede ayudarte a dejar de buscar este material y cambiar tu comportamiento.",
+            "paragraph_es_3": "El programa ReDirección es accesible a través del navegador Tor:",
+        },
+    }
     # Daily rolling index across all items
     anchor = date(2025, 9, 1) # Start day
     days_since_anchor = (date.today() - anchor).days
-    if days_since_anchor >= 0: # Start the display on 9 September 2025
-        index = days_since_anchor % len(tests)
+    if settings.CATEGORY_INTERVENTION_TEST_ENABLED:
+        if days_since_anchor >= 0: # Start the display on 9 September 2025
+            index = days_since_anchor % len(tests)
+        else:
+            index = 0 # Else, 0, neutral view
+        selected_version = tests[index]
+        # If today is the 'random' day (triggered by placeholder)
+        if selected_version.get("test", "") == "random":
+            selected_version = tests[round(time.time()) % (len(tests) - 1)]
+        selected_version = selected_version.copy()
+        selected_version.update(category_messages.get(category, {}))
     else:
-        index = 0 # Else, 0, neutral view
-    selected_version = tests[index]
-    # If today is the 'random' day (triggered by placeholder)
-    if selected_version.get("test", "") == "random":
-        selected_version = tests[round(time.time()) % (len(tests) - 1)]
+        # Before the intervention test is activated, always show one neutral message.
+        selected_version = tests[0]
     # Background color rotation logic
     color_sets = [
         #("#0969f6", "#6ba7fa"),  # blue
@@ -396,6 +496,9 @@ def help_page(query):
     content = {
         "test_text": selected_version,
         "query": {"query": query},
+        "category": (
+            category if settings.CATEGORY_INTERVENTION_TEST_ENABLED else ""
+        ),
         "bg_primary": bg_primary,
         "bg_secondary": bg_secondary,
         "search_token": generate_token(),
@@ -451,17 +554,59 @@ class TorResultsView(ElasticsearchBaseListView):
     template_name = "tor_results.html"
     RESULTS_PER_PAGE = 100
 
+    @staticmethod
+    def _normalise_query_words(value):
+        """Return lowercase alphanumeric words from a query or filter term."""
+        return re.findall(r'[^\W_]+', value.lower(), flags=re.UNICODE)
+
+    @classmethod
+    def _category_matches_query(cls, search_term, filtered_terms):
+        """Return True when any category term occurs as complete query words."""
+        query_words = cls._normalise_query_words(search_term.replace('+', ' '))
+        if not query_words:
+            return False
+
+        for filtered_term in filtered_terms:
+            term_words = cls._normalise_query_words(filtered_term.replace('+', ' '))
+            if not term_words:
+                continue
+
+            width = len(term_words)
+            for index in range(0, len(query_words) - width + 1):
+                if query_words[index:index + width] == term_words:
+                    return True
+
+        return False
+
     def banned_search(self, search_term):
         """
-        This algorithm filters banned search terms.
-        It is a best efford solution and it is not perfect.
+        Return one primary intervention category for a filtered query.
+
+        If a query matches any non-AI filter category and also contains a
+        separate AI modifier word, classify it as AI_CSAM. Otherwise use the
+        normal category priority.
         """
-        for f_term in settings.FILTER_TERMS_AND_SHOW_HELP:
-            for term in search_term.split(" "):
-                term_ascii = ''.join(c for c in term if c.isdigit() or c.isalpha())
-                if f_term.lower() == term.lower() or f_term.lower() == term_ascii.lower():
-                    return True # Filtered
-        return False # Not filtered
+        matched_categories = {
+            category
+            for category in settings.CATEGORY_PRIORITY
+            if category != "AI_CSAM"
+            and self._category_matches_query(
+                search_term, settings.FILTER_TERMS_BY_CATEGORY[category]
+            )
+        }
+
+        if matched_categories:
+            query_words = set(
+                self._normalise_query_words(search_term.replace('+', ' '))
+            )
+            if query_words & {"ai", "generated", "syntetic", "synthetic"}:
+                return "AI_CSAM"
+
+        for category in settings.CATEGORY_PRIORITY:
+            if category in matched_categories:
+                return category
+
+        return None
 
     def get(self, request, *args, **kwargs):
         """
@@ -477,11 +622,15 @@ class TorResultsView(ElasticsearchBaseListView):
             return redirect("home")
 
         search_term = request.GET.get('q', '')
-        if len(search_term) > 100 or len(search_term.split(" ")) > 10:
+        search_terms = [
+            term for term in re.split(r'[+\s]+', search_term) if term
+        ]
+        if len(search_term) > 100 or len(search_terms) > 10:
             answer = "Bad request: too long search query"
             return HttpResponseBadRequest(answer)
-        if self.banned_search(search_term):
-            return help_page(search_term)
+        category = self.banned_search(search_term)
+        if category:
+            return help_page(search_term, category)
         kwargs['q'] = search_term
         kwargs['page'] = request.GET.get('page', 0)
 

@@ -8,7 +8,15 @@ upstream django-onion {
 
 # Map for banned query terms from external file
 map $request_uri $no_cache {
-    include /etc/nginx/banned_terms.map;
+    include /etc/nginx/banned_terms_AI_CSAM.map;
+    include /etc/nginx/banned_terms_COM_groups.map;
+    include /etc/nginx/banned_terms_CSAM_known_content.map;
+    include /etc/nginx/banned_terms_CSAM_site_navigation.map;
+    include /etc/nginx/banned_terms_CSAM_harm_framing.map;
+    include /etc/nginx/banned_terms_CSAM_affiliative_framing.map;
+    include /etc/nginx/banned_terms_CSAM_general.map;
+
+    default 0;
 }
 
 # (4) Cheap hygiene: rate-limit by User-Agent (since IPs are useless on Tor)
